@@ -1,0 +1,52 @@
+name:                StrDiag
+version:             0.1.0.0
+github:              "jfgarciava/StrDiag"
+license:             BSD3
+author:              "Johan Felipe GARCÍA VARGAS"
+maintainer:          "jfgarciava@gmail.com"
+copyright:           "Johan Felipe García Vargas"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Math
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/jfgarciava/StrDiag#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- aeson
+- text
+- bytestring
+- unordered-containers
+
+library:
+  source-dirs: src
+
+executables:
+  StrDiag-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - StrDiag
+
+tests:
+  StrDiag-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - StrDiag
