@@ -1,10 +1,35 @@
-{-# LANGUAGE OverloadedStrings#-}
----Usar string en vez del tipo de texto (Text o ByteString) que usa Aeson
-
-module Cats.Atrib where
+module Cats.Atrib
+     (
+      --Types
+      Det (..)
+      --Classes
+      , Atributable (..)
+      -- functions
+      -- 
+      , minAtr
+      , reName
+      , seeDetails
+      , addDetail
+      , readDetail
+      --
+      , readCD
+      , setCD
+      , getCD
+      , mapCD
+      --
+      , getLabel
+      , draw
+      , drawLabel
+      -- Detalles implementados
+      , labelCD
+      , drawCD
+      )
+      where
 
 import Data.Aeson
 import Data.Aeson.Types
+
+
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -40,6 +65,12 @@ instance Atributable Diag where
 
 --Manejo de Atributos
 
+--- Atributos minimales
+minAtr:: String -> Atrib
+minAtr s =  Atrib s d  where
+                      d = object []--["label".= s ,"draw".= True]
+
+
 reName::(Atributable a) =>  (String -> String) -> a -> a
 reName fun o = modify o atr where
                                atr = Atrib (fun n) d
@@ -70,44 +101,34 @@ fromRight :: b -> Either a b -> b
 fromRight _ (Right b) = b
 fromRight b _         = b
 
--- Detalles componibles
+-- Detalles 
 
-data CompDet d = CompDet { tag::String, def::String -> d, lComp::[d] -> d, hComp::[(d,d,d)] -> d, vComp::[d] -> d}
+data Det d = Det { tag::String, def::String -> d}--, lComp::[d] -> d, hComp::[(d,d,d)] -> d, vComp::[d] -> d}
 
-readCD::(FromJSON d, Atributable b) => CompDet d -> b -> Either String d
+readCD::(FromJSON d, Atributable b) => Det d -> b -> Either String d
 readCD det o = readDetail o (tag det)
 
-setCD::(ToJSON d, Atributable b) =>  CompDet d -> b -> d -> b
+setCD::(ToJSON d, Atributable b) =>  Det d -> b -> d -> b
 setCD det o v = addDetail o (tag det) v
 
-getCD::(FromJSON d, Atributable b) => CompDet d -> b -> d
+getCD::(FromJSON d, Atributable b) => Det d -> b -> d
 getCD det o = fromRight ((def det) (name $ info o)) (readCD det o)
 
-mapCD::(ToJSON d, FromJSON d, Atributable b) => CompDet d -> (d -> d) -> b -> b
+mapCD::(ToJSON d, FromJSON d, Atributable b) => Det d -> (d -> d) -> b -> b
 mapCD det fun o = setCD det o v where
                                  v = fun $ getCD det o
 
-compCDL::(FromJSON d) => CompDet d -> Line -> d 
-compCDL det (Line fcs) = (lComp det) $ map (getCD det) fcs 
-
-compCDB::(FromJSON d) => CompDet d -> Band -> d 
-compCDB det (Band nts) = (hComp det) $ [ ( (getCD det) nt, (compCDL det) $ Line $ sourceNt nt  , (compCDL det) $ Line $ targetNt nt ) | nt<-nts] 
-
-compCDD::(FromJSON d) => CompDet d -> Diag -> d 
-compCDD det (Diag _ bans) = (vComp det) $ map (compCDB det) bans
-
-
----- Detalle componible "label"
-labelCD :: CompDet String
-labelCD = CompDet "label" (\x-> x) concat (concat . (map (\(a,_,_)-> a ))) concat
+---- Detalle "label"
+labelCD :: Det String
+labelCD = Det "label" (\x-> x)-- concat (concat . (map (\(a,_,_)-> a ))) concat
 
 getLabel:: (Atributable b)=> b -> String 
 getLabel = getCD labelCD
 
 
----Detalle componible "draw"
-drawCD :: CompDet Bool 
-drawCD = CompDet "draw" (\_-> False) or (or . (map (\(a,_,_)-> a ))) or
+---Detalle "draw"
+drawCD :: Det Bool 
+drawCD = Det "draw" (\n -> not (take 3 n == "id@"))--- or (or . (map (\(a,_,_)-> a ))) or
 
 draw:: (Atributable b)=> b -> Bool 
 draw = getCD drawCD
@@ -117,58 +138,3 @@ drawLabel atr
          |draw atr  = getLabel atr
          |otherwise = ""
  
-
-
---Definición de Genericos
-
---- Atributos minimales
-minAtr:: String -> Atrib
-minAtr s =  Atrib s d  where
-               d = object ["label".= s ,"draw".= True]
-               
---- Categoría terminal
-catTerm = Cat $Atrib { name = "", details = object ["draw".= False]} 
-
---- constructor generico de una Cat
-cat:: String -> Cat
-cat s = Cat $ mapCD labelCD (\x ->"\\mc{"++s++"}") (minAtr s) 
-
- -- Cat $ Atrib s d where 
- --        d = object ["label".= ("\\mc{"++s++"}") ,"draw".= True]
-
---- Constructor generico de un Fc
-fc :: String -> Cat -> Cat  -> Fc
-fc s a b = Fc (minAtr s) a b 
-
---- Constructor genérico de una Nt
-nt:: String -> [Fc] -> [Fc] -> Nt
-nt s a b = Nt (minAtr s) a b  
-               
---- constructor genérico de un Obj
-objAsFc:: String -> Cat -> Fc
-objAsFc s cat = fc s catTerm cat 
-
-morfAsNt :: (String, String, String) -> Cat -> Nt
-morfAsNt (sf, sa, sb) cat = nt sf [objAsFc sa cat] [objAsFc sb cat]
-
---- Constructor genericos de un Diag
-diag:: String -> [Band]-> Diag
-diag s bans = Diag (minAtr s) bans
-
-
---- Constructor de la identidad
-idAtr:: Atrib -> Atrib
-idAtr (Atrib n d) = let new = addDetail (Atrib ("id@"++n) d) "draw" False
-                        label = concat ["\\id{", getLabel new,"}"]
-                    in addDetail new "label" label
-
-idNt:: Fc -> Nt
-idNt (Fc s cs ct) = Nt (idAtr s) [Fc s cs ct] [Fc s cs ct]
-
-idFc:: Cat -> Fc
-idFc (Cat s) = Fc (idAtr s) (Cat s) (Cat s)
-
-ntDiag:: Nt -> Diag
-ntDiag nt = diag  s [(Band [nt])] where
-                s = "@"++ ((name . keyNt) nt)
-

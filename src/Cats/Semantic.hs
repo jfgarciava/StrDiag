@@ -5,6 +5,7 @@ module Cats.Semantic where
 
 import Cats.Types
 import Cats.Atrib
+import Cats.Gen
 
 import Data.List
 import qualified Data.Text as T
@@ -59,7 +60,7 @@ instance ToLatex Nt where
          |otherwise    = Nothing
 
 isIdLabel:: Latex -> Bool
-isIdLabel s = (take 4 s) == "\\id{"
+isIdLabel s = (take 4 s) == "\\Id{"
 
 
 idComp:: Latex -> Latex-> Latex

@@ -1,7 +1,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Cats.Types where
+module Cats.Types 
+   (
+    -- Types
+    Atrib (..)
+    , Cat (..)
+    , Fc (..)
+    , Nt (..)
+    , Line (..)
+    , Band (..)
+    , Diag (..)
+    -- Classes
+    , Composable (..)
+    -- functions
+    , equatable
+    )
+   where
 
 import Data.Aeson
 import GHC.Generics
@@ -26,7 +41,7 @@ isIdAtr (Atrib n _) = (take 3 n) == "id@"
 data Cat = Cat {keyCat::Atrib} deriving (Eq, Generic)
 data Fc = Fc {keyFc::Atrib, sourceFc::Cat, targetFc::Cat} deriving (Eq, Generic)
 data Nt = Nt {keyNt::Atrib, sourceNt::[Fc], targetNt::[Fc]} deriving (Eq, Generic)
-
+ 
 newtype Line = Line {contentL::[Fc]} deriving (Generic) -- Linea horizontal de Fcs
 newtype Band = Band {contentB::[Nt]} deriving (Eq, Generic) -- Banda horizontal de Nts
 data Diag = Diag {keyD::Atrib, contentD::[Band]} deriving (Eq, Generic) -- lista vertical de Bandas
@@ -46,7 +61,7 @@ class (Eq b) => Composable a b | a -> b where
    valid:: a -> Bool
    source:: a -> b
    target:: a -> b
- --  id :: b-> a
+ --  Métodos para verificar una correcta componibilidad
    check:: a -> a -> Bool
    check a1 a2 = and [valid a1, valid a2, (target a1 == source a2)]
    checkList:: [a] -> Bool
