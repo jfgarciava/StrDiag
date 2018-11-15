@@ -7,19 +7,17 @@ instance Show TexCmd where
 
 texArgs:: String -> Maybe [String]
 texArgs [] = Just []
-texArgs s
-      | (head s == '{') = do r <- texArgs $ tail s1
-                             return ([arg] ++ r)  where
-                                 (arg, s1) =   break (=='}') $ tail s
+texArgs ('{':s) = do r <- texArgs $ tail s1
+                     return (arg: r)  where
+                                 (arg, s1) =   break (=='}')  s
 texArgs _  = Nothing
 
 
 
 texCmdArgs:: String -> Maybe TexCmd
-texCmdArgs s
-         |(head s == '\\') =do r <- texArgs args
-                               return (TexCmd cmd r)   where
-                               (cmd,args) = break (=='{') $ tail s
+texCmdArgs ('\\':s) =do r <- texArgs args
+                        return (TexCmd cmd r)   where
+                               (cmd,args) = break (=='{') s
                               
 
 texCmdArgs _ = Nothing

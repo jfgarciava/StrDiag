@@ -63,25 +63,25 @@ posComp:: String -> String -> String
 posComp f n 
        | isId f = n
        | isid n = n
-       | otherwise = f ++ "\\at" ++ n
+       | otherwise = f ++ " \\at " ++ n
 
 
 instance Sem2 String where
  lComp "label" [(l,_,_)] = l 
- lComp "label" ls = foldl (l2Comp) "\\Id{" $ [ l |(l,_,_)<-ls]
----intercalate " \\comp "  $ reverse [ l |(l,_,_)<-ls, not (isId l)] where
---                                                                    isId s = (take 4 s) == "\\Id{" 
+ lComp "label" ls = foldl1 l2Comp  $ [ l |(l,_,_)<-ls]
+
  lComp _ ls = concat [ l |(l,_,_)<-ls]
 
  hComp "label" [(l,_,_)] = l 
- hComp "label" ls = let s1 = init $ scanl (l2Comp) "\\Id{"  [ s |(_,s,_)<-ls]   
-                        t1 = init $ reverse $ scanl (l2Comp) "\\Id{"  [ t |(_,_,t)<-ls]
+ hComp "label" ls = let s1 = init $ map (foldl1 l2Comp) $ inits  [ s |(_,s,_)<-ls]       ---init $ scanl1 (l2Comp)     
+                        t1 = tail $ map (foldl1 l2Comp) $ tails  [ t |(_,_,t)<-ls]      --- init $ reverse $ scanl1 (l2Comp) 
                         l1 = [ l |(l,_,_)<-ls]
-                        q  = zipWith preComp l1 s1
-                     in foldl (h2Comp) "\\id{" $ zipWith posComp t1 q
+                        q  = zipWith preComp l1 t1
+                     in foldl1 (h2Comp) $ zipWith posComp s1 q
 
  hComp _ ls = concat [ l |(l,_,_)<-ls]
 
+ vComp "label" ls = foldl1 h2Comp [ l |(l,_,_)<-ls]
  vComp _ ls = concat [ l |(l,_,_)<-ls]
 
 
