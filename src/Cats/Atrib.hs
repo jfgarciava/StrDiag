@@ -120,7 +120,7 @@ mapCD det fun o = setCD det o v where
 
 ---- Detalle "label"
 labelCD :: Det String
-labelCD = Det "label" (\x-> x)-- concat (concat . (map (\(a,_,_)-> a ))) concat
+labelCD = Det "label" (\x-> x)
 
 getLabel:: (Atributable b)=> b -> String 
 getLabel = getCD labelCD
@@ -128,7 +128,7 @@ getLabel = getCD labelCD
 
 ---Detalle "draw"
 drawCD :: Det Bool 
-drawCD = Det "draw" (\n -> not (take 3 n == "id@"))--- or (or . (map (\(a,_,_)-> a ))) or
+drawCD = Det "draw" (\n -> not (take 3 n == "id@"))
 
 draw:: (Atributable b)=> b -> Bool 
 draw = getCD drawCD
