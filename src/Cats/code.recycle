@@ -51,3 +51,23 @@ posComp f n
 
 -- Semantica de diagramas de funtores tikzcd
 
+--getGR2 NO atr = Gr2 [Node (0,0) atr] [] [] (0,0)
+--getGR2 ED atr = Gr2 [] [Edge (0,0) (0,0) (0,0) atr] [] (0,0)
+--getGR2 DE atr = Gr2 [] [] [DEdge (0,0) (0,0) atr] (0,0)
+
+
+--gr2Semantic = Sem2 
+
+h_edgeAppend :: Coord -> (Gr2, Gr2, Gr2) -> (Gr2, Gr2, Gr2) -> Gr2
+h_edgeAppend (x,y) (grAtr, grS, grT) (grAtr2, grS2 , grT2) = let gr2 = h_edgeComp (x,y) (grAtr2, grS2 , grT2)
+                                                                 gr2t = translate (\(a,b)-> (a+2,b)) gr2
+                                                             in h_edgeComp (x,y) (grAtr, grS, gr2t)
+
+
+bendHEdge :: (Coord -> Coord) -> Coord -> Gr2 -> Gr2
+bendHEdge fun pos (Gr2 ns hs vs bx atr) = (Gr2 newNs newHs vs newBx atr) where
+                                                                        (hs1, hs2) = break  (\h -> (center h == pos)) hs
+                                                                        newHs = (map (\(HEdge s t c atr) -> (HEdge s t (fun c) atr) ) hs1 ) ++ hs2
+                                                                        (ns1, ns2) = break  (\n -> (at n == pos)) ns
+                                                                        newNs = (map (\(Node pos atr) -> (Node (fun pos) atr) ) ns1 ) ++ ns2
+                                                                        newBx = reSizeToFit (fun pos) bx 
