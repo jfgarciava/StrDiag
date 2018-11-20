@@ -129,6 +129,9 @@ append:: Gr2 -> Gr2 -> Gr2
 append (Gr2 ns hs vs bx atr) (Gr2 ns1 hs1 vs1 (a,b) _) = Gr2 (ns ++ ns1) (hs ++ hs1) (vs ++ vs1) newBx atr where
                                                                                        newBx = foldr reSizeToFit bx [a,b]
 
+simplify :: Gr2 -> Gr2
+simplify (Gr2 ns hs vs bx atr) = (Gr2 (nub ns) (nub hs) (nub vs) bx atr) -- remove duplicates 
+
 translate :: (Coord -> Coord) -> Gr2 -> Gr2 -- Aplica fun a todas las coordenadas, 
 translate fun (Gr2 ns hs vs (p, q) atr) = (Gr2 nst hst vst bxt atr) where
                                                                  nst = map (\(Node pos atr ) -> (Node (fun pos) atr) ) ns
@@ -139,7 +142,7 @@ translate fun (Gr2 ns hs vs (p, q) atr) = (Gr2 nst hst vst bxt atr) where
 fixEnds:: (Coord -> Coord) -> Coord -> Coord -> Coord -> Coord
 fixEnds fun end1 end2 pos = if pos == end1 then end1 else (if pos == end2 then end2 else fun pos)
 
-bendHEdge fun (x,y) l = translate (fixEnds fun (x-l,y) (x+l,y))
+bendHEdge fun s t = translate (fixEnds fun (s,0) (t,0))
 
 h_edgeComp:: Coord -> (Gr2,Gr2,Gr2) -> Gr2 -- -> fComp
 h_edgeComp (x,y) (grAtr, grS, grT) = let gr = foldl1 append [grAtr,translate (\(a,b) -> (a-1,b)) grS,translate (\(a,b) -> (a+1,b)) grT]
@@ -148,16 +151,15 @@ h_edgeComp (x,y) (grAtr, grS, grT) = let gr = foldl1 append [grAtr,translate (\(
 
 commonScale a b = (div m a, div m b, div a 2, div b 2) where m = lcm a b --- las escalas siempre son pares
 
-reCenter gr = translate fun gr where
-                                  fun (a,b) = (a-m,b-n)
+reCenter gr = translate (\(a,b)-> (a-m,b)) $ bendHEdge (\(a,b) ->(a,b-n)) x1 x2 gr where
                                   m = div (x1 + x2) 2
                                   n = div (y1 + y2) 2
                                   ((x1,y1),(x2,y2)) = box gr 
 
 v_edgeComp:: Coord -> (Gr2,Gr2,Gr2) -> Gr2 -- -> nComp
 v_edgeComp (x,y) (grAtr, grS, grT) = let (p,q,h,k) = commonScale (width $ box grS) (width $ box grT)
-                                         trS = bendHEdge  (\(a,b) -> (a,b+1)) (x,y) (p*h) . (translate (\(a,b) -> (p * a, b))) . reCenter
-                                         trT = bendHEdge  (\(a,b) -> (a,b-1)) (x,y) (q*k) . (translate (\(a,b) -> (q * a, b))) . reCenter
+                                         trS = bendHEdge  (\(a,b) -> (a,b+1)) (-p*h) (p*h) . (translate (\(a,b) -> (p * a, b))) . reCenter
+                                         trT = bendHEdge  (\(a,b) -> (a,b-1)) (-q*k) (q*k) . (translate (\(a,b) -> (q * a, b))) . reCenter
                                          gr = foldl1 append [grAtr, trS grS, trT grT]
                                      in addVEdge (x,y+1) (x,y-1) gr
 
@@ -182,10 +184,10 @@ hv_concat pos ls = foldl (hv_append pos) grNull ls -- ->bComp
 
 v_append:: Coord -> Gr2 -> Gr2 -> Gr2
 v_append pos grS grT = append (trS grS) (trT grT) where
-                                               trT = bendHEdge (\(a,b) -> (a,b-h)) pos $ div  (width $ box grT) 2
-                                               trS = bendHEdge (\(a,b) -> (a,b-k)) pos $ div  (width $ box grS) 2
-                                               (_,(_,h)) = box grT
-                                               ((_,k),_) = box grS
+                                               trT = bendHEdge (\(a,b) -> (a,b-h)) s1 t1--pos $ div  (width $ box grT) 2
+                                               trS = bendHEdge (\(a,b) -> (a,b-k)) s2 t2--pos $ div  (width $ box grS) 2
+                                               ((s1,_),(t1,h)) = box grT
+                                               ((s2,k),(t2,_)) = box grS
 
 
 v_concat:: Coord -> ( Gr2, [Gr2]) -> Gr2---- ->dComp
