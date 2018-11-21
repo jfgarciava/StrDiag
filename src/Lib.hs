@@ -88,5 +88,5 @@ objZ = obj "Z" catE
 
 --- Morfismos
 
-r = nt "r" [objX, fcT] [objX]
+r = nt "r" [objA, fcT] [objX]
 
