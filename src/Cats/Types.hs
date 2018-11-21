@@ -96,7 +96,7 @@ instance Composable Diag Line where -- Vertical
    source (Diag _ lsB) = source $ head lsB
    target (Diag _ lsB) = target $ last lsB
 
-allTheSame :: (Eq b) => [b] -> Bool
+allTheSame:: (Eq b) => [b] -> Bool
 allTheSame xs = and $ map (== head xs) (tail xs)
 
 equatable::(Composable a b) => [a] -> Bool

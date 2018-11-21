@@ -72,93 +72,102 @@ instance Meaningfull Diag where
 -------- Semantica de label en latex
 
 
-data TexLabel = Label {asKey::String, asMap::String, asFormula::String}
+--- Construcción de formulas
+
+mkLineFormula :: [(String, Bool)] -> String
+mkLineFormula [(f,_)] = f -- las id se dibujan cuando estan solas
+mkLineFormula ls = intercalate " \\f_comp " $ reverse  [f | (f,isId) <-ls, not (isId)]
+
+preComp (n,isIdn) (f,isIdf) = (if isIdf then n else concat ["\\applyNt{",n ,"}{", f, "}"],  isIdn)
+posComp (f,isIdf) (n,isIdn) = (if isIdf then n else f ++ " \\at " ++ n, isIdn)
+
+
+mkBandFormula:: [(String, Bool)] -> [(String, Bool)] -> [(String, Bool)] -> String
+mkBandFormula [(n,_)] _ _ = n
+mkBandFormula ns ss ts  = mkDiagFormula $ zipWith posComp sS $ zipWith preComp ns ts  where                    
+                                                                   sS = init $ [ (mkLineFormula ls, and [isId | (_ , isId) <-ls] ) | ls <- inits ss]
+                                                                   tS = tail $ [ (mkLineFormula ls, and [isId | (_ , isId) <-ls] ) | ls <- tails ts]
+
+mkDiagFormula :: [(String,Bool) ] -> String
+mkDiagFormula [(f,_)] = f
+mkDiagFormula ls = intercalate " \\n_comp " $ reverse  [f | (f,isId) <-ls, not (isId)]
+
+
+--- construcción de mapas
+
+mkFcMap :: Bool -> String -> String -> String -> String
+mkFcMap sourceIsCatTerm f sf tf = if sourceIsCatTerm
+                                  then concat ["\\obj{",f,"}{", tf , "}"]
+                                  else concat ["\\fc{",f,"}{", sf ,"}{",tf ,"}"]
+isObj s = (take 5 s == "\\obj{")
+
+mkNtMap :: Bool -> String -> String -> String -> String
+mkNtMap sourceIsCatTerm f sf tf = if sourceIsCatTerm
+                                  then concat ["\\morf{",f,"}{", sf , "}{", tf, "}"]
+                                  else concat ["\\nt{",f,"}{", sf ,"}{",tf ,"}"]
+
+-- 2- Semantica de etiquetas latex en dos modos fórmula y mapa 
+
+data TexLabel = Label {doDraw::Bool, asMap::String, asFormula::String}
 
 semLabel:: Sem2 TexLabel
 semLabel = Sem2 load catLabel fcLabel ntLabel lineLabel bandLabel diagLabel
 
 -- loadAtr
-
-load atr = Label (name atr) "" (getCD labelCD atr) 
+load atr = Label (getCD drawCD atr) "" (getCD labelCD atr) 
 
 --- cComp
-
-catLabel (Label n _ f) = Label n id f where id = concat ["\\Id{", f, "}"] 
+catLabel (Label b _ f) = Label b id f where id = concat ["\\Id{", f, "}"] 
 
 -- fComp
-
-mkFcMap sn f sf tf = if (sn == "@TerminalCat@")
-                       then concat ["\\obj{",f,"}{", tf , "}"]
-                       else concat ["\\fc{",f,"}{", sf ,"}{",tf ,"}"]
-
-
-fcLabel (Label n _ f ,Label sn _ sf,Label _ _ tf) = Label n m f where
-                                                             m= mkFcMap sn f sf tf
-                                                                  
-isIdLabel (Label n _ _) = (take 3 n == "id@")                                                                  
-
+fcLabel (Label b _ f ,Label sb _ sf,Label _ _ tf) = Label b m f where
+                                                             m= mkFcMap sb f sf tf
 -- lComp
-
-mkLineFormula ls = intercalate " \\f_comp " $ reverse  [asFormula a | a <-ls, not (isIdLabel a)]
-
 lineLabel:: [(TexLabel, TexLabel,TexLabel)] -> TexLabel
-lineLabel [] = Label "@NULL@" "" ""
+lineLabel [] = Label False "@Error: Empty line." "@Error: Empty line. "
 lineLabel [(a, s, t)] = fcLabel (a, s, t)
-lineLabel ls = Label n m f where 
-                        n = intercalate "%>" $ [asKey a | (a,_,_) <-ls]  
-                        f = mkLineFormula  [a | (a,_,_) <-ls]
-                        m = mkFcMap sn f sf tf   where
+lineLabel ls = Label b m f where 
+                        b = or [doDraw a | (a,_,_) <-ls] 
+                        f = mkLineFormula  [(asFormula a, not $ doDraw a) | (a,_,_) <-ls]
+                        m = mkFcMap sb f sf tf   where
                                               (_,s,_) = head ls
                                               (_,_,t) = last ls
-                                              sn = asKey s
+                                              sb = doDraw s
                                               sf = asFormula s
                                               tf = asFormula t
 
 -- nComp
-
-mkNtMap sm f sf tf = if (take 5 sm == "\\obj{")
-                       then concat ["\\morf{",f,"}{", sf , "}{", tf, "}"]
-                       else concat ["\\nt{",f,"}{", sf ,"}{",tf ,"}"]
-
-
 ntLabel (Label n _ f, Label _ sm sf, Label _ _ tf) =  Label n m f where
-                                                               m= mkNtMap sm f sf tf
+                                                               m= mkNtMap (isObj sm) f sf tf
   
 -- bComp
-
-preComp n f = concat [n, "_{", f, "}"]
-posComp f n = f ++ " \\at " ++ n
-
-
-mkBandFormula:: [(TexLabel, TexLabel,TexLabel)] -> String
-mkBandFormula ls =(\s-> "("++s++")") $ concat $ zipWith posComp ts qs  where
-                     ns = [asFormula a | (a,_,_) <-ls]
-                     ss = init $ map mkLineFormula $ inits  [ s |(_,s,_)<-ls]
-                     ts = tail $ map mkLineFormula $ tails  [ t |(_,_,t)<-ls]
-                     qs = zipWith preComp ns ss 
-
 bandLabel:: [(TexLabel, TexLabel,TexLabel)] -> TexLabel
-bandLabel [] = Label "@NULL@" "" ""
+bandLabel [] = Label False "@Error: Empty band." "@Error: Empty band. "
 bandLabel [(a, s, t)] = ntLabel (a, s, t)
-bandLabel ls =  Label n m f where
-                           f = mkBandFormula ls
-                           n = intercalate "%$" $ [asKey a | (a,_,_) <-ls]
-                           m = mkNtMap sm f sf tf   where
-                                              sf = mkLineFormula [ s |(_,s,_)<-ls]
-                                              tf = mkLineFormula [t|(_,_,t) <- ls]
+bandLabel ls =  Label b m f where
+                           b = or [doDraw a | (a,_,_) <-ls] 
+                           f = mkBandFormula ns ss ts where
+                                                 ns = [(asFormula a, not $ doDraw a) | (a,_,_)<-ls]
+                                                 ss = [(asFormula s, not $ doDraw s) | (_,s,_)<-ls]
+                                                 ts = [(asFormula t, not $ doDraw t) | (_,_,t)<-ls]
+                          
+                           m = mkNtMap sb f sf tf   where
+                                              sf = mkLineFormula [ (asFormula s, not $ doDraw s) |(_,s,_)<-ls]
+                                              tf = mkLineFormula [ (asFormula t, not $ doDraw t) | (_,_,t) <- ls]
                                               sm = asMap $ head [ s |(_,s,_)<-ls]
+                                              sb = isObj sm
 
 -- dComp
-
-mkDiagFormula ls = intercalate " \\n_comp " $ reverse  [asFormula a | a <-ls, not (isIdLabel a)]
-
 diagLabel:: (TexLabel, [TexLabel]) -> TexLabel
-diagLabel (Label n _ _ , ls) = Label n m f where
-                                         f = mkDiagFormula ls
-                                         m = mkNtMap sm f sf tf   where
-                                              sf = asMap $ head  ls
-                                              tf = asMap $ last  ls
+diagLabel ( _ , [] ) = Label False "@Error: Empty diagram." "@Error: Empty diagram. "
+diagLabel ( _ , [b]) = b
+diagLabel ( _ , ls) = Label True m f where
+                                         f = mkDiagFormula $ [ ( (\s-> "("++s++")") $ asFormula b , not $ doDraw b)| b<-ls]
+                                         m = mkNtMap sb f sf tf   where
+                                              sf = asFormula $ head  ls
+                                              tf = asFormula $ last  ls
                                               sm = asMap $ head  ls
+                                              sb = isObj sm
 
 toLatexMap:: (Meaningfull b) => b -> String 
 toLatexMap = asMap . meaning semLabel
