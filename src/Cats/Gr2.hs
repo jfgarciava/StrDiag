@@ -157,9 +157,9 @@ v_concat:: Coord -> ( Gr2, [Gr2]) -> Gr2 -- ->dComp
 v_concat pos (grAtr , ls) = foldl (v_append pos) grAtr ls
 
 
-gr2Sem = Sem2 getGr2 id id id id id addNode h_edgeComp v_edgeComp h_concat hv_concat v_concat
+gr2Sem = Sem2 (getGr2 (0,0)) (addNode (0,0))  (h_edgeComp (0,0)) (v_edgeComp (0,0)) (h_concat (0,0)) (hv_concat (0,0)) (v_concat (0,0))
 
 toGr2:: (Meaningfull b) => b -> Gr2
-toGr2 = meaning gr2Sem (0,0)
+toGr2 = meaning gr2Sem
 
---To Do : Eliminar ids
+--To Do : Eliminar ids, implementar validación

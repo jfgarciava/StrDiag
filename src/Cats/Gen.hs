@@ -20,7 +20,7 @@ import Cats.Atrib
 --Definición de Genericos
                
 --- Categoría terminal
-catTerm = Cat $ addDetail (minAtr "") "draw" False
+catTerm = Cat $ addDetail (minAtr "@TeminalCat@") "draw" False
 
 --- constructor generico de una Cat
 cat:: String -> Cat
