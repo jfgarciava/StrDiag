@@ -71,3 +71,9 @@ bendHEdge fun pos (Gr2 ns hs vs bx atr) = (Gr2 newNs newHs vs newBx atr) where
                                                                         (ns1, ns2) = break  (\n -> (at n == pos)) ns
                                                                         newNs = (map (\(Node pos atr) -> (Node (fun pos) atr) ) ns1 ) ++ ns2
                                                                         newBx = reSizeToFit (fun pos) bx 
+
+
+--(sn == "@TerminalCat@")
+--isIdLabel (Label n _ _) = (take 3 n == "id@")
+-- n = intercalate "%>" $ [asKey a | (a,_,_) <-ls]
+-- n = intercalate "%$" $ [asKey a | (a,_,_) <-ls]
