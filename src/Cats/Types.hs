@@ -8,13 +8,17 @@ module Cats.Types
     , Cat (..)
     , Fc (..)
     , Nt (..)
+    , NNt (..)
     , Line (..)
+    , NLine (..)
     , Band (..)
     , Diag (..)
     -- Classes
     , Composable (..)
     -- functions
     , equatable
+    , toLine
+    , contentNL
     )
    where
 
@@ -31,29 +35,33 @@ data Atrib = Atrib {name::String,
 instance Eq Atrib where
    x == y = name x == name y ---ignora los otros atributos
 
-isIdAtr:: Atrib -> Bool
-isIdAtr (Atrib n _) = (take 3 n) == "id@" 
-
-
-
 ---definición de tipos
 
 data Cat = Cat {keyCat::Atrib} deriving (Eq, Generic)
 data Fc = Fc {keyFc::Atrib, sourceFc::Cat, targetFc::Cat} deriving (Eq, Generic)
+
+data NLine = NLine {catsL :: [Cat], fcsAtr::[Atrib] } deriving (Eq, Generic) --Ocupa la mitad de almacenamiento
+newtype Line = Line {contentL::[Fc]} deriving (Eq, Generic) -- Linea horizontal de Fcs
+
 data Nt = Nt {keyNt::Atrib, sourceNt::[Fc], targetNt::[Fc]} deriving (Eq, Generic)
- 
-newtype Line = Line {contentL::[Fc]} deriving (Generic) -- Linea horizontal de Fcs
+data NNt = NNt {keyNNt::Atrib, sourceNNt::NLine, targetNNt::NLine} deriving (Eq, Generic)
+
 newtype Band = Band {contentB::[Nt]} deriving (Eq, Generic) -- Banda horizontal de Nts
 data Diag = Diag {keyD::Atrib, contentD::[Band]} deriving (Eq, Generic) -- lista vertical de Bandas
 
 
---- las lineas son iguales quitando identidades
 
-removeIds:: [Fc] -> [Fc]
-removeIds as = [a | a <- as,  (not . isIdAtr . keyFc) a  ]
-
-instance Eq Line where
-  (Line as) == (Line bs) = (removeIds as) == (removeIds bs)
+toLine:: [Fc] -> Maybe NLine
+toLine [] = Nothing
+toLine fs = let as = map keyFc fs
+                ss = (map sourceFc fs) ++ [targetFc $ last fs]
+                ts = [sourceFc $ head fs] ++ (map targetFc fs)
+             in if ss == ts then Just $ (NLine ss as) else Nothing
+                                                              
+contentNL:: NLine -> [Fc]
+contentNL (NLine [] _) = [] -- Caso incorrecto
+contentNL (NLine _ []) = []
+contentNL (NLine (s:t:cs) (f:fs)) = (Fc f s t) : (contentNL (NLine (t:cs) fs)) 
 
 
 --Clase de componibilidad globular
@@ -79,12 +87,23 @@ instance Composable Line Cat where
     source (Line lsFc) = source $ head lsFc
     target (Line lsFc) = target $ last lsFc
 
+instance Composable NLine Cat where
+    valid l = let n = length (fcsAtr l) in (length (catsL l) == n+1) && (n > 0)
+    source l = head $ catsL l
+    target l = last $ catsL l
+
+
 instance Composable Nt Cat where -- horizontal
    valid (Nt  _ alsFc blsFc) = and [ valid aLn , valid bLn, source aLn == source bLn, target aLn == target bLn] where
                                     aLn = Line alsFc
                                     bLn = Line blsFc
    source (Nt  _ alsFc blsFc) =  source $ Line alsFc
    target (Nt  _ alsFc blsFc) =  target $ Line alsFc
+
+instance Composable NNt Cat where -- horizontal
+   valid (NNt  _ s t) = and [ valid s , valid t, source s == source t, target s == target t] 
+   source (NNt  _ s t) =  source s
+   target (NNt  _ s t) =  target t
 
 instance Composable Band Line where -- Vertical
    valid (Band lsNt)  = checkList lsNt
@@ -115,11 +134,20 @@ instance Show Cat where
 instance Show Fc where
    show (Fc k s t) = (show s) ++ "--" ++ (show k) ++ "-->" ++ (show t)
 
+instance Show Line where
+   show (Line fcs) = intercalate ":" $ map show fcs
+
+instance Show NLine where
+   show (NLine [] e) = "@Error: Linea sin final. Sobran " ++ show e
+   show (NLine [t] []) = show t
+   show (NLine (t:e) []) = show t ++ " @Error:Cats sobrantes " ++ show e
+   show (NLine (s:cs) (a:as)) = (show s) ++ "--" ++ (show a) ++ "-->" ++ show (NLine cs as)
+
 instance Show Nt where
    show (Nt k s t) = (show $ Line s)++"==" ++ (show k)++ "==>" ++ (show $ Line t)
 
-instance Show Line where
-   show (Line fcs) = intercalate ":" $ map show fcs
+instance Show NNt where
+   show (NNt k s t) = (show s)++"\n || \n" ++ (show k)++ "\n || \n \\ / \n" ++ (show t)
 
 instance Show Band where
    show (Band nts) = intercalate ";" $ map show nts

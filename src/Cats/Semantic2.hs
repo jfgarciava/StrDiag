@@ -3,22 +3,15 @@
 module Cats.Semantic2 where
 
 import Data.List
-import Cats.Gen
+
 
 import Cats.Types
 import Cats.Atrib
+import Cats.Gen
 
 -- Una semantica 2-categorica cuenta con composiciones lineal (fc), horizontal (nt) y vertical (nt)
--- mod es un modificador, contiene todos los posibles modos de una semantica, la semanta incluye información sobre como cambiar de modo
--- No veo necesidad de  mod ->
 
 data Sem2  d = Sem2 { loadAtr :: Atrib -> d,
-                         --- modificadores
-                       --  atrMod:: mod -> mod,
-                       --  catSMod:: mod -> mod,
-                       --  catTMod:: mod -> mod,
-                       --  fcSMod:: mod -> mod,
-                       --  fcTMod:: mod -> mod,
                          --- computadores
                          cComp:: d -> d,
                          fComp:: (d,d,d) -> d,
@@ -67,16 +60,19 @@ instance Meaningfull Diag where
                                                                           geta = meaning sem 
                                                                           getb = meaning sem 
 
+-- Semantica de label en latex
 
+----  Comandos Latex necesarios 
+---------- simbolos: \fComp, \nComp, \at
+---------- 1-arg: \id, \Id, \mc
+---------- 2-arg: \obj, \applyNt
+---------- 3-arg: \fc, \morf, \nt
 
--------- Semantica de label en latex
-
-
---- Construcción de formulas
+---- Construcción de formulas
 
 mkLineFormula :: [(String, Bool)] -> String
 mkLineFormula [(f,_)] = f -- las id se dibujan cuando estan solas
-mkLineFormula ls = intercalate " \\f_comp " $ reverse  [f | (f,isId) <-ls, not (isId)]
+mkLineFormula ls = intercalate " \\fComp " $ reverse  [f | (f,isId) <-ls, not (isId)]
 
 preComp (n,isIdn) (f,isIdf) = (if isIdf then n else concat ["\\applyNt{",n ,"}{", f, "}"],  isIdn)
 posComp (f,isIdf) (n,isIdn) = (if isIdf then n else f ++ " \\at " ++ n, isIdn)
@@ -90,10 +86,9 @@ mkBandFormula ns ss ts  = mkDiagFormula $ zipWith posComp sS $ zipWith preComp n
 
 mkDiagFormula :: [(String,Bool) ] -> String
 mkDiagFormula [(f,_)] = f
-mkDiagFormula ls = intercalate " \\n_comp " $ reverse  [f | (f,isId) <-ls, not (isId)]
+mkDiagFormula ls = intercalate " \\nComp " $ reverse  [f | (f,isId) <-ls, not (isId)]
 
-
---- construcción de mapas
+---- Construcción de mapas
 
 mkFcMap :: Bool -> String -> String -> String -> String
 mkFcMap sourceIsCatTerm f sf tf = if sourceIsCatTerm
@@ -114,14 +109,14 @@ semLabel:: Sem2 TexLabel
 semLabel = Sem2 load catLabel fcLabel ntLabel lineLabel bandLabel diagLabel
 
 -- loadAtr
-load atr = Label (getCD drawCD atr) "" (getCD labelCD atr) 
+load atr = Label (getCD drawCD atr) "@Error: pure atribute." (getCD labelCD atr) 
 
 --- cComp
 catLabel (Label b _ f) = Label b id f where id = concat ["\\Id{", f, "}"] 
 
 -- fComp
 fcLabel (Label b _ f ,Label sb _ sf,Label _ _ tf) = Label b m f where
-                                                             m= mkFcMap sb f sf tf
+                                                             m= mkFcMap (not sb) f sf tf
 -- lComp
 lineLabel:: [(TexLabel, TexLabel,TexLabel)] -> TexLabel
 lineLabel [] = Label False "@Error: Empty line." "@Error: Empty line. "
@@ -129,7 +124,7 @@ lineLabel [(a, s, t)] = fcLabel (a, s, t)
 lineLabel ls = Label b m f where 
                         b = or [doDraw a | (a,_,_) <-ls] 
                         f = mkLineFormula  [(asFormula a, not $ doDraw a) | (a,_,_) <-ls]
-                        m = mkFcMap sb f sf tf   where
+                        m = mkFcMap (not sb) f sf tf   where
                                               (_,s,_) = head ls
                                               (_,_,t) = last ls
                                               sb = doDraw s

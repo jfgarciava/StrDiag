@@ -77,3 +77,54 @@ bendHEdge fun pos (Gr2 ns hs vs bx atr) = (Gr2 newNs newHs vs newBx atr) where
 --isIdLabel (Label n _ _) = (take 3 n == "id@")
 -- n = intercalate "%>" $ [asKey a | (a,_,_) <-ls]
 -- n = intercalate "%$" $ [asKey a | (a,_,_) <-ls]
+
+
+
+-- isIdLabel:: Latex -> Bool
+-- isIdLabel s = (take 4 s) == "\\Id{"
+
+
+-- idComp:: Latex -> Latex-> Latex
+-- idComp a b
+--  | isIdLabel a = b
+--  | isIdLabel b = a 
+--  | otherwise = concat [a, b]
+
+
+preComp:: Latex -> Latex -> Latex
+preComp "" _ = ""
+preComp a "" = a 
+preComp a  b = concat [a, "_{", b, "}"]
+
+posComp:: Latex -> Latex -> Latex
+posComp _ "" = ""
+posComp a  b = concat [a,b]
+
+
+                              let s1 = init $ scanl (idComp) "" (reverse s)   
+                                   t1 =tail $ scanr (idComp) "" (reverse t)
+                                   l = reverse$ map (drawLabel . keyNt)  nts
+                                   q = zipWith preComp l t1
+                                in return $ concat $ zipWith posComp s1 q
+
+
+--- las lineas son iguales quitando identidades
+isIdAtr:: Atrib -> Bool
+isIdAtr (Atrib n _) = (take 3 n) == "id@" 
+
+removeIds:: [Fc] -> [Fc]
+removeIds as = [a | a <- as,  (not . isIdAtr . keyFc) a  ]
+
+instance Eq Line where
+  (Line as) == (Line bs) = (removeIds as) == (removeIds bs)
+
+
+-- mod es un modificador, contiene todos los posibles modos de una semantica, la semanta incluye información sobre como cambiar de modo
+-- No veo necesidad de  mod ->
+
+                         --- modificadores
+                       --  atrMod:: mod -> mod,
+                       --  catSMod:: mod -> mod,
+                       --  catTMod:: mod -> mod,
+                       --  fcSMod:: mod -> mod,
+                       --  fcTMod:: mod -> mod,

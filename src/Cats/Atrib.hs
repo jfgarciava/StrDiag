@@ -5,24 +5,18 @@ module Cats.Atrib
       --Classes
       , Atributable (..)
       -- functions
-      -- 
+      -- on Atributes
       , minAtr
       , reName
       , seeDetails
       , addDetail
       , readDetail
-      --
+      -- on details
       , readCD
       , setCD
       , getCD
       , mapCD
       --
-      , getLabel
-      , draw
-      , drawLabel
-      -- Detalles implementados
-      , labelCD
-      , drawCD
       )
       where
 
@@ -68,7 +62,7 @@ instance Atributable Diag where
 --- Atributos minimales
 minAtr:: String -> Atrib
 minAtr s =  Atrib s d  where
-                      d = object []--["label".= s ,"draw".= True]
+                      d = object []
 
 
 reName::(Atributable a) =>  (String -> String) -> a -> a
@@ -118,23 +112,3 @@ mapCD::(ToJSON d, FromJSON d, Atributable b) => Det d -> (d -> d) -> b -> b
 mapCD det fun o = setCD det o v where
                                  v = fun $ getCD det o
 
----- Detalle "label"
-labelCD :: Det String
-labelCD = Det "label" (\x-> x)
-
-getLabel:: (Atributable b)=> b -> String 
-getLabel = getCD labelCD
-
-
----Detalle "draw"
-drawCD :: Det Bool 
-drawCD = Det "draw" (\n -> not (take 3 n == "id@"))
-
-draw:: (Atributable b)=> b -> Bool 
-draw = getCD drawCD
-
-drawLabel::(Atributable b)=> b -> String
-drawLabel atr
-         |draw atr  = getLabel atr
-         |otherwise = ""
- 

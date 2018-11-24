@@ -70,6 +70,15 @@ monAsoR = diag "Asosiatividad despues" [b1,b2] where
             b2 = Band [ntMu]
 
 
+library::[(String,Diag)]
+library = [
+  ("adjF", adjF),
+  ("adjU", adjU),
+  ("monAsoL", monAsoL),
+  ("monAsoR", monAsoR),
+  ("monUniL", monUniL),
+  ("monUniR", monUniR)
+          ]
 --- Objetos
 
 objA = obj "A" catC

@@ -10,11 +10,40 @@ module Cats.Gen
     , idFc
     , idNt
     , ntDiag
+     -- Detalles implementados
+    , labelCD
+    , drawCD
+    , getLabel
+    , draw
+    , drawLabel
      )
      where
 
 import Cats.Types
 import Cats.Atrib
+
+-- Implementacion de Detalles
+
+---- Detalle "label"
+labelCD :: Det String
+labelCD = Det "label" (\x-> x)
+
+getLabel:: (Atributable b)=> b -> String 
+getLabel = getCD labelCD
+
+
+---Detalle "draw"
+drawCD :: Det Bool 
+drawCD = Det "draw" (\n -> not (take 3 n == "id@" || n =="@TeminalCat@"))
+
+draw:: (Atributable b)=> b -> Bool 
+draw = getCD drawCD
+
+drawLabel::(Atributable b)=> b -> String
+drawLabel atr
+         |draw atr  = getLabel atr
+         |otherwise = ""
+ 
 
 
 --Definición de Genericos
