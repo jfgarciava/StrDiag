@@ -22,13 +22,13 @@ fcT = fc "T" catC catC
 fcG = fc "G" catD catE
 fcH = fc "H" catE catC
 
-prima:: Fc -> Fc
+prima:: Fc Atrib -> Fc Atrib
 prima f = let f1 = mapCD labelCD (\x -> x++"'") f
           in  reName (\x -> x++"'") f1
 
 --- Trans. Naturales
 
-ntPrima:: String -> Fc -> Nt
+ntPrima:: String -> Fc Atrib -> Nt Atrib
 ntPrima s f = nt s [f] [(prima f)]
 
 ntAlpha = ntPrima "\\alpha" fcF
@@ -70,7 +70,7 @@ monAsoR = diag "Asosiatividad despues" [b1,b2] where
             b2 = Band [ntMu]
 
 
-library::[(String,Diag)]
+library::[(String,Diag Atrib)]
 library = [
   ("adjF", adjF),
   ("adjU", adjU),

@@ -128,3 +128,25 @@ instance Eq Line where
                        --  catTMod:: mod -> mod,
                        --  fcSMod:: mod -> mod,
                        --  fcTMod:: mod -> mod,
+
+
+--- escribir y leer Json
+
+
+instance FromJSON Cat a
+instance ToJSON Cat a
+
+instance FromJSON Fc a
+instance ToJSON Fc a
+
+instance FromJSON Nt a
+instance ToJSON Nt a
+
+instance FromJSON Line a
+instance ToJSON Line a
+
+instance FromJSON Band a
+instance ToJSON Band a
+
+instance FromJSON Diag a
+instance ToJSON Diag a

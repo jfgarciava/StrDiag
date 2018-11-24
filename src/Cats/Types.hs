@@ -1,16 +1,13 @@
-{-# LANGUAGE DeriveGeneric #-}
+-- {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Cats.Types 
    (
     -- Types
-    Atrib (..)
-    , Cat (..)
+      Cat (..)
     , Fc (..)
     , Nt (..)
-    , NNt (..)
     , Line (..)
-    , NLine (..)
     , Band (..)
     , Diag (..)
     -- Classes
@@ -18,50 +15,70 @@ module Cats.Types
     -- functions
     , equatable
     , toLine
-    , contentNL
+    , contentL
     )
    where
 
-import Data.Aeson
-import GHC.Generics
+-- import Data.Aeson
+-- import GHC.Generics
 import Data.List
 
+import Cats.Atrib
 
----- Atrib contiene los atributos
-data Atrib = Atrib {name::String,
-                    details::Value --tipo de un  JSON
-                    }deriving (Generic)
+---definición de tipos como funtores
 
-instance Eq Atrib where
-   x == y = name x == name y ---ignora los otros atributos
+data Cat a = Cat {keyCat::a} deriving (Eq) --, Generic)
 
----definición de tipos
+instance Functor Cat where
+  fmap f (Cat a) = Cat (f a)
 
-data Cat = Cat {keyCat::Atrib} deriving (Eq, Generic)
-data Fc = Fc {keyFc::Atrib, sourceFc::Cat, targetFc::Cat} deriving (Eq, Generic)
+data Fc a = Fc {keyFc::a, sourceFc::Cat a, targetFc::Cat a} deriving (Eq) -- , Generic)
 
-data NLine = NLine {catsL :: [Cat], fcsAtr::[Atrib] } deriving (Eq, Generic) --Ocupa la mitad de almacenamiento
-newtype Line = Line {contentL::[Fc]} deriving (Eq, Generic) -- Linea horizontal de Fcs
+instance Functor Fc where
+  fmap f (Fc a s t) = Fc (f a) (fmap f s) (fmap f t)
 
-data Nt = Nt {keyNt::Atrib, sourceNt::[Fc], targetNt::[Fc]} deriving (Eq, Generic)
-data NNt = NNt {keyNNt::Atrib, sourceNNt::NLine, targetNNt::NLine} deriving (Eq, Generic)
+data Line a = Line {catsL :: [Cat a], fcsAtr::[a] } deriving (Eq) -- , Generic)  -- Linea horizontal de Fcs
 
-newtype Band = Band {contentB::[Nt]} deriving (Eq, Generic) -- Banda horizontal de Nts
-data Diag = Diag {keyD::Atrib, contentD::[Band]} deriving (Eq, Generic) -- lista vertical de Bandas
+instance Functor Line where
+  fmap f (Line cs as) = Line [fmap f c | c <- cs]  (map f as)
 
+instance Semigroup (Line a) where
+  (Line cs as) <> (Line ds bs) = Line (cs ++ drop 1 ds) (as ++ bs)
 
-
-toLine:: [Fc] -> Maybe NLine
+toLine:: (Eq a) => [Fc a] -> Maybe (Line a)
 toLine [] = Nothing
 toLine fs = let as = map keyFc fs
                 ss = (map sourceFc fs) ++ [targetFc $ last fs]
                 ts = [sourceFc $ head fs] ++ (map targetFc fs)
-             in if ss == ts then Just $ (NLine ss as) else Nothing
+             in if ss == ts then Just $ (Line ss as) else Nothing
                                                               
-contentNL:: NLine -> [Fc]
-contentNL (NLine [] _) = [] -- Caso incorrecto
-contentNL (NLine _ []) = []
-contentNL (NLine (s:t:cs) (f:fs)) = (Fc f s t) : (contentNL (NLine (t:cs) fs)) 
+contentL:: Line a -> [Fc a]
+contentL (Line [] _) = [] -- Caso incorrecto
+contentL (Line _ []) = []
+contentL (Line (s:t:cs) (f:fs)) = (Fc f s t) : (contentL (Line (t:cs) fs)) 
+
+
+data Nt a = Nt {keyNt::a, sourceNt::Line a, targetNt::Line a} deriving (Eq) --, Generic)
+
+instance Functor Nt where
+  fmap f (Nt a s t) = Nt (f a) (fmap f s) (fmap f t)
+  
+newtype Band a = Band {contentB::[Nt a]} deriving (Eq) ---, Generic) -- Banda horizontal de Nts
+
+instance Functor Band where
+  fmap f (Band ns) = Band [fmap f n | n <-ns]
+
+instance Semigroup (Band a) where
+  (Band  as) <> (Band bs) = Band (as ++ bs)
+
+ 
+data Diag a = Diag {keyD::a, contentD::[Band a] } deriving (Eq) --, Generic) -- lista vertical de Bandas
+
+instance Functor Diag where
+ fmap f (Diag a bs) = Diag (f a) [fmap f b | b <-bs]
+
+instance (Semigroup a) => Semigroup (Diag a) where
+  (Diag c as) <> (Diag d bs) = Diag (c <> d) (as ++ bs)
 
 
 --Clase de componibilidad globular
@@ -77,40 +94,34 @@ class (Eq b) => Composable a b | a -> b where
    checkList ls = and $ zipWith check (init ls) (tail ls)
 
 
-instance Composable Fc Cat where
+instance (Eq a) => Composable (Fc a)  (Cat a) where
     valid _ = True
     source = sourceFc
     target = targetFc
 
-instance Composable Line Cat where
-    valid (Line lsFc) = checkList lsFc
-    source (Line lsFc) = source $ head lsFc
-    target (Line lsFc) = target $ last lsFc
 
-instance Composable NLine Cat where
+instance (Eq a) => Composable (Line a) (Cat a)  where
     valid l = let n = length (fcsAtr l) in (length (catsL l) == n+1) && (n > 0)
     source l = head $ catsL l
     target l = last $ catsL l
 
 
-instance Composable Nt Cat where -- horizontal
-   valid (Nt  _ alsFc blsFc) = and [ valid aLn , valid bLn, source aLn == source bLn, target aLn == target bLn] where
-                                    aLn = Line alsFc
-                                    bLn = Line blsFc
-   source (Nt  _ alsFc blsFc) =  source $ Line alsFc
-   target (Nt  _ alsFc blsFc) =  target $ Line alsFc
+instance (Eq a) => Composable (Nt a) (Cat a) where -- horizontal
+   valid (Nt  _ s t) = and [ valid s , valid t, source s == source t, target s == target t] 
+   source (Nt  _ s t) =  source s
+   target (Nt  _ s t) =  target t
 
-instance Composable NNt Cat where -- horizontal
-   valid (NNt  _ s t) = and [ valid s , valid t, source s == source t, target s == target t] 
-   source (NNt  _ s t) =  source s
-   target (NNt  _ s t) =  target t
-
-instance Composable Band Line where -- Vertical
+instance (Eq a) => Composable (Band a) (Line a) where -- Vertical
    valid (Band lsNt)  = checkList lsNt
-   source (Band lsNt) = Line $ concat (map sourceNt lsNt)
-   target (Band lsNt) = Line $ concat (map targetNt lsNt)
+   source (Band lsNt) = foldl1 (<>) (map sourceNt lsNt) 
+   target (Band lsNt) = foldl1 (<>) (map targetNt lsNt)
 
-instance Composable Diag Line where -- Vertical
+central::(Eq a) => Band a -> [Cat a] 
+central (Band []) = []
+central (Band (n:ns)) = (source n):(map target (n:ns))
+
+
+instance (Eq a) => Composable (Diag a) (Line a) where -- Vertical
    valid (Diag _ lsB) = checkList lsB
    source (Diag _ lsB) = source $ head lsB
    target (Diag _ lsB) = target $ last lsB
@@ -122,59 +133,46 @@ equatable::(Composable a b) => [a] -> Bool
 equatable [] = False
 equatable as = and $ [allTheSame (map source as), allTheSame (map target as)] ++ (map valid as)
 
-
 -- show instances
 
-instance Show Atrib where
-   show = name
-
-instance Show Cat where
+instance (Show a) => Show (Cat a) where
    show (Cat k) = "("++ (show k) ++ ")"
 
-instance Show Fc where
+instance (Show a) => Show (Fc a) where
    show (Fc k s t) = (show s) ++ "--" ++ (show k) ++ "-->" ++ (show t)
 
-instance Show Line where
-   show (Line fcs) = intercalate ":" $ map show fcs
 
-instance Show NLine where
-   show (NLine [] e) = "@Error: Linea sin final. Sobran " ++ show e
-   show (NLine [t] []) = show t
-   show (NLine (t:e) []) = show t ++ " @Error:Cats sobrantes " ++ show e
-   show (NLine (s:cs) (a:as)) = (show s) ++ "--" ++ (show a) ++ "-->" ++ show (NLine cs as)
+instance (Show a) => Show (Line a) where
+   show (Line [] e) = "@Error: Linea sin final. Sobran " ++ show e
+   show (Line [t] []) = show t
+   show (Line (t:e) []) = show t ++ " @Error:Cats sobrantes " ++ show e
+   show (Line (s:cs) (a:as)) = (show s) ++ "--" ++ (show a) ++ "-->" ++ show (Line cs as)
 
-instance Show Nt where
-   show (Nt k s t) = (show $ Line s)++"==" ++ (show k)++ "==>" ++ (show $ Line t)
+instance (Show a) => Show (Nt a) where
+   show (Nt k s t) = (show s)++"\n || \n" ++ (show k)++ "\n || \n \\ / \n" ++ (show t)
 
-instance Show NNt where
-   show (NNt k s t) = (show s)++"\n || \n" ++ (show k)++ "\n || \n \\ / \n" ++ (show t)
-
-instance Show Band where
+instance (Show a) => Show (Band a) where
    show (Band nts) = intercalate ";" $ map show nts
 
-instance Show Diag where
+instance (Show a) => Show (Diag a) where
    show (Diag k bans) = "Diag "++ (show k)++"\n"++(intercalate "\n" $ map show bans)
 
 
---- escribir y leer Json
+-- Atributable instances
 
-instance FromJSON Atrib
-instance ToJSON Atrib
+instance (Atributable a) => Atributable (Cat a) where
+ info = info . keyCat
+ modify s atr = fmap (\x -> modify x atr) s
+ 
+instance (Atributable a) => Atributable (Fc a) where
+ info = info . keyFc
+ modify s atr = fmap (\x -> modify x atr) s
+ 
+instance (Atributable a) => Atributable (Nt a) where
+ info = info . keyNt
+ modify s atr = fmap (\x -> modify x atr) s
+ 
+instance (Atributable a) => Atributable (Diag a) where
+ info = info . keyD
+ modify s atr = fmap (\x -> modify x atr) s
 
-instance FromJSON Cat
-instance ToJSON Cat
-
-instance FromJSON Fc
-instance ToJSON Fc
-
-instance FromJSON Nt
-instance ToJSON Nt
-
-instance FromJSON Line
-instance ToJSON Line
-
-instance FromJSON Band
-instance ToJSON Band
-
-instance FromJSON Diag
-instance ToJSON Diag

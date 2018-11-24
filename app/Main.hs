@@ -4,7 +4,7 @@ import System.Environment
 import qualified Data.ByteString.Lazy.Char8 as B 
 
 import Lib (library)
-import Cats.Semantic2 (toLatexMap)
+--import Cats.Semantic2 (toLatexMap)
 
 
 
@@ -23,6 +23,6 @@ main = do
   fileName <- return $  "./tex/" ++ name ++ ".tex"
   case lookup item library of
      (Just diag) -> B.writeFile fileName content where
-                         content =  replace "(Map)" (toLatexMap diag) template
+                         content =  replace "(Map)" (show diag) template
      Nothing -> putStrLn "Item no encontrado."
   

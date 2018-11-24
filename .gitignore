@@ -6,3 +6,4 @@ StrDiag.cabal
 *.log
 *.aux
 *.synctex.gz
+*.backup

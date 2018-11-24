@@ -1,7 +1,10 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Cats.Atrib
      (
       --Types
-      Det (..)
+      Atrib (..)
+      , Det (..)
       --Classes
       , Atributable (..)
       -- functions
@@ -22,13 +25,30 @@ module Cats.Atrib
 
 import Data.Aeson
 import Data.Aeson.Types
-
+import GHC.Generics
 
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString.Lazy.Char8 as B
 
-import Cats.Types
+
+
+---- Atrib contiene los atributos
+data Atrib = Atrib {name::String,
+                    details::Value --tipo de un  JSON
+                    }deriving (Generic)
+
+instance Eq Atrib where
+   x == y = name x == name y ---ignora los otros atributos
+
+instance Show Atrib where
+   show = name
+
+
+--- ToDo: Escribir implementación de JSON
+instance FromJSON Atrib
+instance ToJSON Atrib
+
 
 -- Clase de tipos con Atributos y sus instancias
 
@@ -39,22 +59,6 @@ class Atributable a where
 instance Atributable Atrib where
  info = id
  modify _ a = a
-
-instance Atributable Cat where
- info = keyCat
- modify _ atr = Cat atr
- 
-instance Atributable Fc where
- info = keyFc
- modify (Fc _ s t) atr = Fc atr s t
- 
-instance Atributable Nt where
- info = keyNt
- modify (Nt _ s t) atr = Nt atr s t
-
-instance Atributable Diag where
- info = keyD
- modify (Diag _ b) atr = Diag atr b
 
 
 --Manejo de Atributos
