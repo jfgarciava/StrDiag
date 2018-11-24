@@ -13,15 +13,16 @@ import Cats.Gen
 
 data Sem2  d = Sem2 { loadAtr :: Atrib -> d,
                          --- computadores
-                         cComp:: d -> d,
-                         fComp:: (d,d,d) -> d,
-                         nComp:: (d,d,d) -> d,
-                         lComp:: [(d,d,d)] -> d,
-                         bComp:: [(d,d,d)] -> d,
-                         dComp:: (d,[d]) -> d }
+                      cComp:: d -> d,
+                      fComp:: (d,d,d) -> d,
+                      nlComp::[d] -> [d] -> d,
+                      lComp:: [(d,d,d)] -> d,
+                      nComp:: (d,d,d) -> d,
+                      bComp:: [(d,d,d)] -> d,
+                      dComp:: (d,[d]) -> d
+                    }
 
 --- Instancias
-
 class Meaningfull b where
   meaning:: Sem2  d -> b -> d 
 
@@ -36,6 +37,11 @@ instance Meaningfull Fc where
                                                                   geta = meaning sem 
                                                                   gets = meaning sem 
                                                                   gett = meaning sem 
+
+instance Meaningfull NLine where
+  meaning sem (NLine cs as) = nlComp sem  [getc c | c <-cs]  [geta a | a<-as] where
+                                                                                   geta = meaning sem
+                                                                                   getc = meaning sem 
 
 instance Meaningfull Line where
   meaning sem (Line fs) = lComp sem $ [ (geta (info f), gets $ source f , gett $ target f) | f<-fs] where

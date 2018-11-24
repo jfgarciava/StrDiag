@@ -113,10 +113,11 @@ instance ToLatex [Nt] where ----la más importante y difícil
  tolatex nts
           | checkList nts = do s <- sequence $ map (tolatex . sourceNt) nts
                                t <- sequence $ map (tolatex . targetNt) nts
-                               ns <- sequence $ [(tolatex n, draw n) | n <-  nts]
+                               l <- sequence $ map tolatex nts
+                               ls <- return $ zip l $ [ draw n | n <- nts]
                                ss <- return $ zip s $ [and $ map draw (sourceNt n) | n <- nts]
                                ts <- return $ zip t $ [and $ map draw (targetNt n) | n <- nts]
-                               return $ mkBandFormula ns ss ts
+                               return $ mkBandFormula ls ss ts
           | otherwise = Nothing
 
 instance ToLatex Band where
