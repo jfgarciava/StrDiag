@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+--{-# LANGUAGE DeriveGeneric #-}
 
 module Cats.Atrib
      (
@@ -25,7 +25,7 @@ module Cats.Atrib
 
 import Data.Aeson
 import Data.Aeson.Types
-import GHC.Generics
+-- import GHC.Generics
 
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
@@ -35,8 +35,8 @@ import qualified Data.ByteString.Lazy.Char8 as B
 
 ---- Atrib contiene los atributos
 data Atrib = Atrib {name::String,
-                    details::Value --tipo de un  JSON
-                    }deriving (Generic)
+                    details::Value --tipo de un objeto JSON
+                    } --deriving (Generic)
 
 instance Eq Atrib where
    x == y = name x == name y ---ignora los otros atributos
@@ -45,9 +45,17 @@ instance Show Atrib where
    show = name
 
 
---- ToDo: Escribir implementación de JSON
-instance FromJSON Atrib
-instance ToJSON Atrib
+--- Escribir y leer JSON
+instance FromJSON Atrib where
+ parseJSON = withObject "Atrib" (\o-> do
+                         name <- o.: T.pack "name"
+                         details <- return $ Object $ HM.delete (T.pack "name") o
+                         return $ Atrib name details
+                     )
+
+instance ToJSON Atrib where
+  toJSON (Atrib n (Object d)) = Object $ HM.insert (T.pack "name") (toJSON n) d
+  toJSON (Atrib n d) = object [T.pack "name" .= n, T.pack "other" .= d]
 
 
 -- Clase de tipos con Atributos y sus instancias

@@ -5,8 +5,8 @@
 \usetikzlibrary{cd}
 \usetikzlibrary{arrows,arrows.meta}
 
-\newcommand{\fComp}{\otimes}
-\newcommand{\nComp}{}
+\newcommand{\fComp}{} %\otimes
+\newcommand{\nComp}{\circ}
 \newcommand{\at}{}
 \newcommand{\mc}[1]{\mathcal{#1}}
 \newcommand{\id}[1]{\mathrm{id}_{#1}}
@@ -25,7 +25,13 @@
 Cada diagrama describe una 2-celda
 
 $\displaystyle
-\nt{(\mu) \nComp (T \at \applyNt{\mu}{T})}{T \at \applyNt{\mu}{T}}{\mu}
+Diagrama de tipo Nt
+(@TeminalCat@)--A-->(C)--T-->(C)
+ ||
+r
+ ||
+\ /
+(@TeminalCat@)--X-->(E)
 $
 
 que rellena un diagrama conmutativo

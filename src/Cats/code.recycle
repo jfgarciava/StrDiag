@@ -150,3 +150,9 @@ instance ToJSON Band a
 
 instance FromJSON Diag a
 instance ToJSON Diag a
+
+--     , ntDiag
+
+ntDiag:: Nt Atrib -> Diag  Atrib
+ntDiag nt = diag  s [(Band [nt])] where
+                s = "@"++ ((name . info) nt)

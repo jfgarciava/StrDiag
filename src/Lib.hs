@@ -22,9 +22,27 @@ fcT = fc "T" catC catC
 fcG = fc "G" catD catE
 fcH = fc "H" catE catC
 
+
 prima:: Fc Atrib -> Fc Atrib
 prima f = let f1 = mapCD labelCD (\x -> x++"'") f
           in  reName (\x -> x++"'") f1
+
+
+--- Objetos
+
+objA = obj "A" catC
+objB = obj "B" catC
+objC = obj "C" catC
+
+
+objM = obj "M" catD
+objN = obj "N" catD
+objL = obj "L" catD
+
+objX = obj "X" catE
+objY = obj "Y" catE
+objZ = obj "Z" catE
+
 
 --- Trans. Naturales
 
@@ -38,6 +56,11 @@ ntUni = nt "\\eta" [(idFc catC)] [fcF, fcU]
 ntEva = nt "\\varepsilon" [fcU, fcF] [(idFc catD)]
 ntMu = nt "\\mu" [fcT, fcT] [fcT]
 ntUn = nt "\\eta" [(idFc catC)] [fcT]
+
+--- Morfismos
+
+r = nt "r" [objA, fcT] [objX]
+
 
 -- Diagramas
 
@@ -70,8 +93,13 @@ monAsoR = diag "Asosiatividad despues" [b1,b2] where
             b2 = Band [ntMu]
 
 
-library::[(String,Diag Atrib)]
+library::[(String,Diagram Atrib)]
 library = [
+  ("catC", C catC),
+  ("catConj",C catConj),
+  ("objX", F objX),
+  ("lineGF", L (minAtr "(C) -F-> (D) -G-> (E)") $ toLine [fcF,fcG] ),
+  ("r",N r),
   ("adjF", adjF),
   ("adjU", adjU),
   ("monAsoL", monAsoL),
@@ -79,23 +107,3 @@ library = [
   ("monUniL", monUniL),
   ("monUniR", monUniR)
           ]
---- Objetos
-
-objA = obj "A" catC
-objB = obj "B" catC
-objC = obj "C" catC
-
-
-objM = obj "M" catD
-objN = obj "N" catD
-objL = obj "L" catD
-
-objX = obj "X" catE
-objY = obj "Y" catE
-objZ = obj "Z" catE
-
-
---- Morfismos
-
-r = nt "r" [objA, fcT] [objX]
-

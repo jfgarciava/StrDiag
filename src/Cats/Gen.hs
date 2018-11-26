@@ -9,7 +9,6 @@ module Cats.Gen
     , diag
     , idFc
     , idNt
-    , ntDiag
      -- Detalles implementados
     , labelCD
     , drawCD
@@ -61,11 +60,8 @@ fc s a b = Fc (minAtr s) a b
 
 --- Constructor genérico de una Nt
 nt:: String -> [(Fc Atrib)] -> [(Fc Atrib)] -> Nt Atrib
-nt s a b =case  do  al <- toLine a
-                    bl <- toLine b
-                    return $ Nt (minAtr s) al bl
-                of Just n -> n
-                   Nothing -> Nt (minAtr s) (Line [] []) (Line [] [])
+nt s a b=  Nt (minAtr s) al bl where  al = toLine a
+                                      bl = toLine b
                    
 --- constructor genérico de un Obj
 obj:: String -> Cat Atrib -> Fc Atrib
@@ -74,9 +70,9 @@ obj s cat = fc s catTerm cat
 morf :: (String, String, String) -> Cat Atrib -> Nt Atrib
 morf (sf, sa, sb) cat = nt sf [obj sa cat] [obj sb cat]
 
---- Constructor genericos de un Diag
-diag:: String -> [Band Atrib] -> Diag Atrib
-diag s bs = Diag (minAtr s) bs
+--- Constructor genérico de un Diagram
+diag:: String -> [Band Atrib] -> Diagram Atrib
+diag s bs = P (minAtr s) (Plane bs)
 
 
 --- Constructores de la identidad
@@ -92,9 +88,3 @@ idFc (Cat s) = Fc idAtr (Cat s) (Cat s) where
                                    idAtr = let atr1 = mapCD labelCD (\l -> "\\Id{" ++ l ++ "}" )  s
                                                atr2 = addDetail atr1 "draw" False
                                             in reName (\n -> "id@" ++ n ) atr2
-
-
-ntDiag:: Nt Atrib -> Diag  Atrib
-ntDiag nt = diag  s [(Band [nt])] where
-                s = "@"++ ((name . info) nt)
-

@@ -9,13 +9,15 @@ module Cats.Types
     , Nt (..)
     , Line (..)
     , Band (..)
-    , Diag (..)
+    , Plane (..)
+    , Diagram (..)
     -- Classes
     , Composable (..)
     -- functions
     , equatable
     , toLine
     , contentL
+    , central
     )
    where
 
@@ -45,12 +47,15 @@ instance Functor Line where
 instance Semigroup (Line a) where
   (Line cs as) <> (Line ds bs) = Line (cs ++ drop 1 ds) (as ++ bs)
 
-toLine:: (Eq a) => [Fc a] -> Maybe (Line a)
-toLine [] = Nothing
+instance Monoid (Line a) where
+  mempty = Line [] []
+
+toLine:: (Eq a) => [Fc a] -> Line a
+toLine [] = Line [] []
 toLine fs = let as = map keyFc fs
                 ss = (map sourceFc fs) ++ [targetFc $ last fs]
                 ts = [sourceFc $ head fs] ++ (map targetFc fs)
-             in if ss == ts then Just $ (Line ss as) else Nothing
+             in if ss == ts then (Line ss as) else Line [] []
                                                               
 contentL:: Line a -> [Fc a]
 contentL (Line [] _) = [] -- Caso incorrecto
@@ -71,14 +76,42 @@ instance Functor Band where
 instance Semigroup (Band a) where
   (Band  as) <> (Band bs) = Band (as ++ bs)
 
+instance Monoid (Band a) where
+  mempty = Band [] 
  
-data Diag a = Diag {keyD::a, contentD::[Band a] } deriving (Eq) --, Generic) -- lista vertical de Bandas
+data Plane a = Plane { contentP::[Band a] } deriving (Eq) --, Generic) -- lista vertical de Bandas
 
-instance Functor Diag where
- fmap f (Diag a bs) = Diag (f a) [fmap f b | b <-bs]
+instance Functor Plane where
+ fmap f (Plane  bs) = Plane  [fmap f b | b <-bs]
 
-instance (Semigroup a) => Semigroup (Diag a) where
-  (Diag c as) <> (Diag d bs) = Diag (c <> d) (as ++ bs)
+instance  Semigroup (Plane a) where
+  (Plane  as) <> (Plane  bs) = Plane (as ++ bs)
+
+instance Monoid (Plane a) where
+  mempty = Plane [] 
+
+--- Incorrecto porque falta implementar id
+hcomp ::Plane a -> Plane a -> Plane a
+(Plane  as) `hcomp` (Plane  bs) = Plane (zipWith (<>) (as ++ (take m $ repeat mempty )) (bs ++ (take n $ repeat mempty )) ) where
+                                                                                                                             m0= length as
+                                                                                                                             n0= length bs
+                                                                                                                             mm= max n0 m0
+                                                                                                                             m = mm - m0
+                                                                                                                             n = mm - n0
+
+ 
+data Diagram a = C (Cat a) | F (Fc a) | N (Nt a) | L Atrib (Line a) | B Atrib (Band a) | P Atrib (Plane a) 
+
+whichKind ::Diagram a -> String
+whichKind (C _) = "Cat"
+whichKind (F _) = "Fc"
+whichKind (N _) = "Nt"
+whichKind (L _ _) = "Line"
+whichKind (B _ _) = "Band"
+whichKind (P _ _) = "Plane"
+
+
+
 
 
 --Clase de componibilidad globular
@@ -113,18 +146,18 @@ instance (Eq a) => Composable (Nt a) (Cat a) where -- horizontal
 
 instance (Eq a) => Composable (Band a) (Line a) where -- Vertical
    valid (Band lsNt)  = checkList lsNt
-   source (Band lsNt) = foldl1 (<>) (map sourceNt lsNt) 
-   target (Band lsNt) = foldl1 (<>) (map targetNt lsNt)
+   source (Band lsNt) = mconcat (map sourceNt lsNt) 
+   target (Band lsNt) = mconcat (map targetNt lsNt)
 
 central::(Eq a) => Band a -> [Cat a] 
 central (Band []) = []
 central (Band (n:ns)) = (source n):(map target (n:ns))
 
 
-instance (Eq a) => Composable (Diag a) (Line a) where -- Vertical
-   valid (Diag _ lsB) = checkList lsB
-   source (Diag _ lsB) = source $ head lsB
-   target (Diag _ lsB) = target $ last lsB
+instance (Eq a) => Composable (Plane a) (Line a) where -- Vertical
+   valid (Plane lsB) = checkList lsB
+   source (Plane lsB) = source $ head lsB
+   target (Plane lsB) = target $ last lsB
 
 allTheSame:: (Eq b) => [b] -> Bool
 allTheSame xs = and $ map (== head xs) (tail xs)
@@ -132,6 +165,37 @@ allTheSame xs = and $ map (== head xs) (tail xs)
 equatable::(Composable a b) => [a] -> Bool
 equatable [] = False
 equatable as = and $ [allTheSame (map source as), allTheSame (map target as)] ++ (map valid as)
+
+-- Atributable instances
+
+instance (Atributable a) => Atributable (Cat a) where
+ info = info . keyCat
+ modify s atr = fmap (\x -> modify x atr) s
+ 
+instance (Atributable a) => Atributable (Fc a) where
+ info = info . keyFc
+ modify s atr = fmap (\x -> modify x atr) s
+ 
+instance (Atributable a) => Atributable (Nt a) where
+ info = info . keyNt
+ modify s atr = fmap (\x -> modify x atr) s
+ 
+instance (Atributable a) => Atributable (Diagram a) where
+ info d = case d of
+                C a -> info a
+                F a -> info a
+                N a -> info a
+                L a _ -> a
+                B a _ -> a
+                P a _ -> a
+   
+ modify d atr = case d of
+                        C s -> C $ fmap (\x -> modify x atr) s
+                        F s -> F $ fmap (\x -> modify x atr) s
+                        N s -> N $ fmap (\x -> modify x atr) s
+                        L a s -> L atr s
+                        B a s -> B atr s
+                        P a s -> P atr s
 
 -- show instances
 
@@ -149,30 +213,24 @@ instance (Show a) => Show (Line a) where
    show (Line (s:cs) (a:as)) = (show s) ++ "--" ++ (show a) ++ "-->" ++ show (Line cs as)
 
 instance (Show a) => Show (Nt a) where
-   show (Nt k s t) = (show s)++"\n || \n" ++ (show k)++ "\n || \n \\ / \n" ++ (show t)
+   show (Nt k s t) = (show s)++"\n ||\n" ++ (show k)++ "\n ||\n\\ /\n" ++ (show t)
 
 instance (Show a) => Show (Band a) where
-   show (Band nts) = intercalate ";" $ map show nts
+   show (Band nts) = (intercalate ";" ( map (show . sourceNt) nts) ) ++ "\n ||\n" ++
+                                       (intercalate ";" ( map (show . keyNt) nts) ) ++  "\n ||\n\\ /\n" ++
+                                       (intercalate ";" ( map (show . targetNt) nts) )
+                                                         
 
-instance (Show a) => Show (Diag a) where
-   show (Diag k bans) = "Diag "++ (show k)++"\n"++(intercalate "\n" $ map show bans)
+instance (Show a) => Show (Plane a) where
+   show (Plane  bans) = intercalate "\n" $ map show bans
 
+showD d = "Diagrama de tipo " ++ k ++ "\n" where
+                                                  k = whichKind d
 
--- Atributable instances
-
-instance (Atributable a) => Atributable (Cat a) where
- info = info . keyCat
- modify s atr = fmap (\x -> modify x atr) s
- 
-instance (Atributable a) => Atributable (Fc a) where
- info = info . keyFc
- modify s atr = fmap (\x -> modify x atr) s
- 
-instance (Atributable a) => Atributable (Nt a) where
- info = info . keyNt
- modify s atr = fmap (\x -> modify x atr) s
- 
-instance (Atributable a) => Atributable (Diag a) where
- info = info . keyD
- modify s atr = fmap (\x -> modify x atr) s
-
+instance (Show a) => Show (Diagram a) where
+  show (C c) = showD (C c) ++ (show c)
+  show (F c) = showD (F c) ++ (show c)
+  show (N c) = showD (N c) ++ (show c)
+  show (L atr l) = show atr ++ "\n" ++ (showD (L atr l)) ++ (show l)
+  show (B atr l) = show atr ++ "\n" ++ (showD (B atr l)) ++ (show l)
+  show (P atr l) = show atr ++ "\n" ++ (showD (P atr l)) ++ (show l)
