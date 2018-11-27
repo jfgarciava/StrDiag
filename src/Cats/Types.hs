@@ -12,12 +12,16 @@ module Cats.Types
     , Plane (..)
     , Diagram (..)
     -- Classes
+    , IdEq (..)
     , Composable (..)
     -- functions
     , equatable
     , toLine
     , contentL
     , central
+    , idFc
+    , idBand
+    , idNt
     )
    where
 
@@ -39,7 +43,7 @@ data Fc a = Fc {keyFc::a, sourceFc::Cat a, targetFc::Cat a} deriving (Eq) -- , G
 instance Functor Fc where
   fmap f (Fc a s t) = Fc (f a) (fmap f s) (fmap f t)
 
-data Line a = Line {catsL :: [Cat a], fcsAtr::[a] } deriving (Eq) -- , Generic)  -- Linea horizontal de Fcs
+data Line a = Line {catsL :: [Cat a], fcsAtr::[a] } -- deriving (Eq) -- , Generic)  -- Linea horizontal de Fcs
 
 instance Functor Line where
   fmap f (Line cs as) = Line [fmap f c | c <- cs]  (map f as)
@@ -62,6 +66,10 @@ contentL (Line [] _) = [] -- Caso incorrecto
 contentL (Line _ []) = []
 contentL (Line (s:t:cs) (f:fs)) = (Fc f s t) : (contentL (Line (t:cs) fs)) 
 
+instance (IdEq a) => Eq (Line a) where
+  Line [] _ == Line [] _  = True
+  Line cs as == Line ct at = (head cs == head ct) && (last cs == last ct) &&
+                                ([a | a <- as , not (isId a) ] == [a | a <- at , not (isId a) ] )
 
 data Nt a = Nt {keyNt::a, sourceNt::Line a, targetNt::Line a} deriving (Eq) --, Generic)
 
@@ -90,16 +98,7 @@ instance  Semigroup (Plane a) where
 instance Monoid (Plane a) where
   mempty = Plane [] 
 
---- Incorrecto porque falta implementar id
-hcomp ::Plane a -> Plane a -> Plane a
-(Plane  as) `hcomp` (Plane  bs) = Plane (zipWith (<>) (as ++ (take m $ repeat mempty )) (bs ++ (take n $ repeat mempty )) ) where
-                                                                                                                             m0= length as
-                                                                                                                             n0= length bs
-                                                                                                                             mm= max n0 m0
-                                                                                                                             m = mm - m0
-                                                                                                                             n = mm - n0
 
- 
 data Diagram a = C (Cat a) | F (Fc a) | N (Nt a) | L Atrib (Line a) | B Atrib (Band a) | P Atrib (Plane a) 
 
 whichKind ::Diagram a -> String
@@ -110,9 +109,37 @@ whichKind (L _ _) = "Line"
 whichKind (B _ _) = "Band"
 whichKind (P _ _) = "Plane"
 
+-- Manejo de identidades
 
 
+class (Eq a) => IdEq a where
+  idFcGen :: a -> a
+  idNtGen :: Fc a -> a
+  isId :: a -> Bool
 
+-- Axiomas
+--- isId . idFcGen == const True
+--- isId . idNtGen == const True
+
+idFc:: (IdEq a) =>  Cat a -> Fc a
+idFc (Cat s) = Fc (idFcGen s) (Cat s) (Cat s)
+
+idNt:: (IdEq  a) => Fc a -> Nt a
+idNt f = Nt (idNtGen f) l l where l = toLine $ [f]
+
+idBand:: (IdEq  a) => Line a -> Band a
+idBand l = Band (map idNt (contentL l) )
+
+
+--- Composición horizontal
+hcomp ::(IdEq a) => Plane a -> Plane a -> Plane a
+hcomp (Plane  as) (Plane  bs) = Plane (zipWith (<>) (as ++ (replicate m (id as) )) (bs ++ replicate n (id bs)) ) where
+                                                                                                           m0= length as
+                                                                                                           n0= length bs
+                                                                                                           mm= max n0 m0
+                                                                                                           m = mm - m0
+                                                                                                           n = mm - n0
+                                                                                                           id = idBand . (target . last)  
 
 --Clase de componibilidad globular
 class (Eq b) => Composable a b | a -> b where
@@ -144,7 +171,7 @@ instance (Eq a) => Composable (Nt a) (Cat a) where -- horizontal
    source (Nt  _ s t) =  source s
    target (Nt  _ s t) =  target t
 
-instance (Eq a) => Composable (Band a) (Line a) where -- Vertical
+instance (IdEq a) => Composable (Band a) (Line a) where -- Vertical
    valid (Band lsNt)  = checkList lsNt
    source (Band lsNt) = mconcat (map sourceNt lsNt) 
    target (Band lsNt) = mconcat (map targetNt lsNt)
@@ -154,7 +181,7 @@ central (Band []) = []
 central (Band (n:ns)) = (source n):(map target (n:ns))
 
 
-instance (Eq a) => Composable (Plane a) (Line a) where -- Vertical
+instance (IdEq a) => Composable (Plane a) (Line a) where -- Vertical
    valid (Plane lsB) = checkList lsB
    source (Plane lsB) = source $ head lsB
    target (Plane lsB) = target $ last lsB
@@ -224,13 +251,13 @@ instance (Show a) => Show (Band a) where
 instance (Show a) => Show (Plane a) where
    show (Plane  bans) = intercalate "\n" $ map show bans
 
-showD d = "Diagrama de tipo " ++ k ++ "\n" where
+showD d = "\nDiagrama de tipo " ++ k ++ "\n" where
                                                   k = whichKind d
 
 instance (Show a) => Show (Diagram a) where
-  show (C c) = showD (C c) ++ (show c)
-  show (F c) = showD (F c) ++ (show c)
-  show (N c) = showD (N c) ++ (show c)
-  show (L atr l) = show atr ++ "\n" ++ (showD (L atr l)) ++ (show l)
-  show (B atr l) = show atr ++ "\n" ++ (showD (B atr l)) ++ (show l)
-  show (P atr l) = show atr ++ "\n" ++ (showD (P atr l)) ++ (show l)
+  show (C c) = showD (C c) ++ (show c) ++ "\n"
+  show (F c) = showD (F c) ++ (show c) ++ "\n"
+  show (N c) = showD (N c) ++ (show c) ++ "\n"
+  show (L atr l) = "\n" ++ show atr ++ (showD (L atr l)) ++ (show l) ++ "\n"
+  show (B atr l) = "\n" ++ show atr ++ (showD (B atr l)) ++ (show l) ++ "\n"
+  show (P atr l) = "\n" ++ show atr ++ (showD (P atr l)) ++ (show l) ++ "\n"

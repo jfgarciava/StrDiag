@@ -7,8 +7,6 @@ module Cats.Gen
     , obj
     , morf
     , diag
-    , idFc
-    , idNt
      -- Detalles implementados
     , labelCD
     , drawCD
@@ -77,14 +75,13 @@ diag s bs = P (minAtr s) (Plane bs)
 
 --- Constructores de la identidad
 
-idNt:: Fc Atrib -> Nt Atrib
-idNt (Fc s cs ct) = Nt idAtr (Line [cs, ct] [s]) (Line [cs, ct] [s]) where 
-                                   idAtr = let atr1 = mapCD labelCD (\l -> "\\id{" ++ l ++ "}" )  s
-                                               atr2 = addDetail atr1 "draw" False
-                                            in reName (\n -> "id@" ++ n ) atr2                                 
+instance IdEq Atrib where
+  idFcGen atr =  let atr1 = mapCD labelCD (\l -> "\\Id{" ++ l ++ "}" )  atr
+                     atr2 = addDetail atr1 "draw" False
+                 in reName (\n -> "id@" ++ n ) atr2
 
-idFc:: Cat Atrib -> Fc Atrib
-idFc (Cat s) = Fc idAtr (Cat s) (Cat s) where
-                                   idAtr = let atr1 = mapCD labelCD (\l -> "\\Id{" ++ l ++ "}" )  s
-                                               atr2 = addDetail atr1 "draw" False
-                                            in reName (\n -> "id@" ++ n ) atr2
+  idNtGen (Fc atr _ _) = let atr1 = mapCD labelCD (\l -> "\\id{" ++ l ++ "}" )  atr
+                             atr2 = addDetail atr1 "draw" False
+                         in reName (\n -> "id@" ++ n ) atr2
+
+  isId atr = take 3 (name atr) == "id@"
