@@ -59,7 +59,7 @@ ntUn = nt "\\eta" [(idFc catC)] [fcT]
 
 --- Morfismos
 
-r = nt "r" [objA, fcT] [objX]
+r = nt "r" [objA, fcT] [objA]
 
 
 -- Diagramas

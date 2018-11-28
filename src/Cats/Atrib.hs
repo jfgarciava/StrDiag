@@ -10,6 +10,7 @@ module Cats.Atrib
       -- functions
       -- on Atributes
       , minAtr
+      , noAtr
       , reName
       , seeDetails
       , addDetail
@@ -76,6 +77,7 @@ minAtr:: String -> Atrib
 minAtr s =  Atrib s d  where
                       d = object []
 
+noAtr = minAtr "@NULL@"
 
 reName::(Atributable a) =>  (String -> String) -> a -> a
 reName fun o = modify o atr where

@@ -18,10 +18,14 @@ module Cats.Types
     , equatable
     , toLine
     , contentL
+    , minimalCommonLine
     , central
     , idFc
     , idBand
     , idNt
+    , isIdL
+    , isIdB
+    , isIdP
     )
    where
 
@@ -70,6 +74,19 @@ instance (IdEq a) => Eq (Line a) where
   Line [] _ == Line [] _  = True
   Line cs as == Line ct at = (head cs == head ct) && (last cs == last ct) &&
                                 ([a | a <- as , not (isId a) ] == [a | a <- at , not (isId a) ] )
+
+minimalCommonLine::(IdEq a) => Line a -> Line a -> Line a
+minimalCommonLine (Line [s] []) l = l
+minimalCommonLine l (Line [s] []) = l
+minimalCommonLine (Line (s:t:c) (f:fs)) (Line (r:u:d) (g:gs)) = if (s == r) then
+                                                                  if  ( f == g )
+                                                                     then (Line [s,t] [f]) <> minimalCommonLine (Line (t:c) fs) (Line (u:d) gs)
+                                                                     else if (isId f && s == t)
+                                                                             then (Line [s,t] [f]) <> minimalCommonLine (Line (t:c) fs) (Line (r:u:d) (g:gs))
+                                                                             else if (isId g && r == u )
+                                                                                    then (Line [r,u] [g]) <> minimalCommonLine (Line (s:t:c) (f:fs)) (Line (u:d) (gs))
+                                                                                    else Line [] []
+                                                                 else Line [] []
 
 data Nt a = Nt {keyNt::a, sourceNt::Line a, targetNt::Line a} deriving (Eq) --, Generic)
 
@@ -130,6 +147,14 @@ idNt f = Nt (idNtGen f) l l where l = toLine $ [f]
 idBand:: (IdEq  a) => Line a -> Band a
 idBand l = Band (map idNt (contentL l) )
 
+isIdL:: (IdEq  a) => Line a -> Bool
+isIdL l = all isId (fcsAtr l)
+
+isIdB:: (IdEq  a) => Band a -> Bool
+isIdB b = all (isId . keyNt) (contentB b)
+
+isIdP:: (IdEq  a) => Plane a -> Bool
+isIdP p = all isIdB (contentP p)
 
 --- Composición horizontal
 hcomp ::(IdEq a) => Plane a -> Plane a -> Plane a

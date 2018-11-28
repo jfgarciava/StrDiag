@@ -156,3 +156,12 @@ instance ToJSON Diag a
 ntDiag:: Nt Atrib -> Diag  Atrib
 ntDiag nt = diag  s [(Band [nt])] where
                 s = "@"++ ((name . info) nt)
+
+
+---Detalle "asMap"
+--asMapCD :: Det Bool 
+--asMapCD = Det "asMap" (const True)
+----
+--let atrs = setCD asMapCD (reName ("source@" ++) atr) False
+--                                     atrt = setCD asMapCD (reName ("target@" ++) atr) False
+--                                 in

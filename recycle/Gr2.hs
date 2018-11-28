@@ -57,7 +57,7 @@ instance Show Gr2 where
 -- Definicion de la 2-semantica 
 
 ---- grafo nulo 
-noAtr = minAtr "@NULL@" 
+
 grNull = Gr2 [] [] [] zero noAtr
 -- d <- Gr2, mod <- Coord
 

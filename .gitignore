@@ -7,3 +7,4 @@ StrDiag.cabal
 *.aux
 *.synctex.gz
 *.backup
+tex/test.tex

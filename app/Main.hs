@@ -2,9 +2,10 @@ module Main where
 
 import System.Environment
 import qualified Data.ByteString.Lazy.Char8 as B 
+import Data.List
 
 import Lib (library)
---import Cats.Semantic2 (toLatexMap)
+import Cats.Semantic (to, latexMap)
 
 
 
@@ -23,6 +24,9 @@ main = do
   fileName <- return $  "./tex/" ++ name ++ ".tex"
   case lookup item library of
      (Just diag) -> B.writeFile fileName content where
-                         content =  replace "(Map)" (show diag) template
-     Nothing -> putStrLn "Item no encontrado."
-  
+                         content =  replace "(Map)" m template
+                         m = case to latexMap diag of
+                                             Just s -> s 
+                                             Nothing -> "Error:Latex no generado, por favor, verifique que sea valida."
+     Nothing -> putStr $ "Item no encontrado.\n"++"La biblioteca incluye:\n" ++ ( intercalate "\n" [show i | (i,_)<-library])++"\n"
+
