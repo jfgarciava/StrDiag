@@ -1,7 +1,7 @@
 -- {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Cats.Types 
+module Cats.Types
    (
     -- Types
       Cat (..)
@@ -64,11 +64,11 @@ toLine fs = let as = map keyFc fs
                 ss = (map sourceFc fs) ++ [targetFc $ last fs]
                 ts = [sourceFc $ head fs] ++ (map targetFc fs)
              in if ss == ts then (Line ss as) else Line [] []
-                                                              
+
 contentL:: Line a -> [Fc a]
 contentL (Line [] _) = [] -- Caso incorrecto
 contentL (Line _ []) = []
-contentL (Line (s:t:cs) (f:fs)) = (Fc f s t) : (contentL (Line (t:cs) fs)) 
+contentL (Line (s:t:cs) (f:fs)) = (Fc f s t) : (contentL (Line (t:cs) fs))
 
 instance (IdEq a) => Eq (Line a) where
   Line [] _ == Line [] _  = True
@@ -92,7 +92,7 @@ data Nt a = Nt {keyNt::a, sourceNt::Line a, targetNt::Line a} deriving (Eq) --, 
 
 instance Functor Nt where
   fmap f (Nt a s t) = Nt (f a) (fmap f s) (fmap f t)
-  
+
 newtype Band a = Band {contentB::[Nt a]} deriving (Eq) ---, Generic) -- Banda horizontal de Nts
 
 instance Functor Band where
@@ -102,8 +102,8 @@ instance Semigroup (Band a) where
   (Band  as) <> (Band bs) = Band (as ++ bs)
 
 instance Monoid (Band a) where
-  mempty = Band [] 
- 
+  mempty = Band []
+
 data Plane a = Plane { contentP::[Band a] } deriving (Eq) --, Generic) -- lista vertical de Bandas
 
 instance Functor Plane where
@@ -113,8 +113,7 @@ instance  Semigroup (Plane a) where
   (Plane  as) <> (Plane  bs) = Plane (as ++ bs)
 
 instance Monoid (Plane a) where
-  mempty = Plane [] 
-
+  mempty = Plane []
 
 data Diagram a = C (Cat a) | F (Fc a) | N (Nt a) | L Atrib (Line a) | B Atrib (Band a) | P Atrib (Plane a) 
 

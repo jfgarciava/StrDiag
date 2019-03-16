@@ -32,11 +32,11 @@ mkSemantic c f l n b p = Semantic (\d ->case d of
 
 -- Semantica para reconocer las identidades
 boolId:: (IdEq a) => Semantic a Bool
-boolId = mkSemantic (isId . keyCat) (isId . keyFc) (\atr l -> isIdL l) (isId . keyNt) (\atr b -> isIdB b) (\atr p -> isIdP p)  
+boolId = mkSemantic (isId . keyCat) (isId . keyFc) (\atr l -> isIdL l) (isId . keyNt) (\atr b -> isIdB b) (\atr p -> isIdP p)
 
 
 -- Semantica de label y Map en latex
-----  Comandos Latex necesarios 
+----  Comandos Latex necesarios
 ---------- simbolos: \fComp, \nComp, \at
 ---------- 1-arg: \id, \Id, \mc
 ---------- 2-arg: \obj, \applyNt
@@ -104,7 +104,7 @@ bandToLatexMap atr ban  = let s = source ban; t= target ban;
                                 b <- lineToLatexLabel noAtr s
                                 label <- bandToLatexLabel atr ban
                                 return $ mkNtMap ((source s) == catTerm) label a b
-                             
+
 planeToLatexMap atr pla = let s = source pla; t= target pla;
                           in do a <- lineToLatexLabel noAtr s
                                 b <- lineToLatexLabel noAtr s
@@ -123,7 +123,7 @@ posComp (f,isIdf) (n,isIdn) = (if isIdf then n else f ++ " \\at " ++ n, isIdn)
 
 mkBandFormula:: [(String, Bool)] -> [(String, Bool)] -> [(String, Bool)] -> String
 mkBandFormula [(n,_)] _ _ = n
-mkBandFormula ns ss ts  = mkPlaneFormula $ zipWith posComp sS $ zipWith preComp ns ts  where                    
+mkBandFormula ns ss ts  = mkPlaneFormula $ zipWith posComp sS $ zipWith preComp ns ts  where
                                                                    sS = init $ [ (mkLineFormula ls, and [isId | (_ , isId) <-ls] ) | ls <- inits ss]
                                                                    tS = tail $ [ (mkLineFormula ls, and [isId | (_ , isId) <-ls] ) | ls <- tails ts]
 

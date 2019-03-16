@@ -11,7 +11,7 @@ import Cats.Gen
 
 catC = cat "C"
 catD = cat "D"
-catE = addDetail (cat "E") "color" "red" 
+catE = addDetail (cat "E") "color" "red"
 catConj = addDetail (cat "Conj") "label" "\\Conj"
 
 --- Funtores
@@ -68,7 +68,7 @@ r = nt "r" [objA, fcT] [objA]
 
 adjF = diag "Adjunto izquierdo" [b1,b2] where
           b1= Band [ntUni , idNt fcF]
-          b2= Band [idNt fcF, ntEva] 
+          b2= Band [idNt fcF, ntEva]
 
 adjU = diag "Adjunto derecho" [b1,b2] where
           b1= Band [idNt fcU, ntUni]
